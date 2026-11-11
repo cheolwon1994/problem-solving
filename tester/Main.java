@@ -2,146 +2,136 @@ import java.util.*;
 import java.io.*;
 import java.lang.*;
 
+class Info implements Comparable<Info> {
+    int idx, arrivalTime, executeTime;
+    Info(int idx, int arrivalTime, int executeTime) {
+        this.idx = idx;
+        this.arrivalTime = arrivalTime;
+        this.executeTime = executeTime;
+    }
+
+    @Override
+    public int compareTo(Info i) {
+        if(i.executeTime == this.executeTime) {
+            return Integer.compare(this.idx, i.idx);
+        }
+        return Integer.compare(this.executeTime, i.executeTime);
+    }
+}
+
+class ArrivalInfo implements Comparable<ArrivalInfo> {
+    int idx, arrivalTime, executeTime;
+    ArrivalInfo(int idx, int arrivalTime, int executeTime) {
+        this.idx = idx;
+        this.arrivalTime = arrivalTime;
+        this.executeTime = executeTime;
+    }
+
+    @Override
+    public int compareTo(ArrivalInfo i) {
+        if(this.arrivalTime== i.arrivalTime) {
+            return Integer.compare(this.idx, i.idx);
+        }
+        return Integer.compare(this.arrivalTime, i.arrivalTime);
+    }
+}
+
+//1. 고객 정보 대기열에 넣기
+//2. laser 끝난 고객의 시간-1까지 대기실에 있다고 가정
 class Solution {
-    public int[] solution(int[][] edges) {
-        int num = 0;
-        HashMap<Integer, HashSet<Integer>> out = new HashMap<>();
-        HashMap<Integer, HashSet<Integer>> in = new HashMap<>();
-        for (int[] edge : edges) {
-            int from = edge[0];
-            int to = edge[1];
-            num = Math.max(num, from);
-            num = Math.max(num, to);
-            out.computeIfAbsent(from, k -> new HashSet<>()).add(to);
-            in.computeIfAbsent(to, k -> new HashSet<>()).add(from);
+    public int[] solution(int[][] tasks){
+        //init
+        int[] answer = new int[tasks.length];
+        PriorityQueue<ArrivalInfo> pq = new PriorityQueue<>();
+
+        //sort tasks -> 도착시간 오름차순으로 정렬
+        for(int i=0;i<tasks.length;i++) {
+            pq.offer(new ArrivalInfo(i, tasks[i][0], tasks[i][1]));
         }
-        boolean[] visited = new boolean[num + 1];
-        int donut = 0, stick = 0, eight = 0;
 
-        // 추가된 Node: 받는거 0개 + 나가는거 여러개
-        // 도넛: 각 Node당 나가는거 1개, 받는거 1개 + 순환
-        // 막대: 각 Node랑 연결된게 없거나, 받는거 0게 + 나가는게 1개만 있는애부터 찾아서 쭉 시작
-        // 8자: 나가는거 2개 + 받는거 2개를 찾으면 8자의 중심
+        //대기 큐
+        PriorityQueue<Info> waitQ = new PriorityQueue<>();
+        int cnt = 0;
+        int finishTime = 0;
 
-        //1. 추가된 Node 찾기
-        int addedNode = 0;
-        for (Map.Entry<Integer, HashSet<Integer>> e : out.entrySet()) {
-            // 받는거 0개, 나가는 개수 확인
-            int node = e.getKey();
-            if ((in.get(node) == null || in.get(node).isEmpty()) && out.get(node).size()>1) {
-                addedNode = e.getKey();
-                visited[addedNode] = true;
-                break;
+        while(!pq.isEmpty() || !waitQ.isEmpty()) {
+            //대기큐에 넣을 작업 넣는다
+            while(!pq.isEmpty()) {
+                if(pq.peek().arrivalTime <= finishTime) {
+                    ArrivalInfo ii = pq.poll();
+                    waitQ.offer(new Info(ii.idx, ii.arrivalTime, ii.executeTime));
+                } else break;
+            }
+
+            //finishTime 갱신
+            if(waitQ.isEmpty()) {
+                if(!pq.isEmpty()) {
+                    finishTime = pq.peek().arrivalTime;
+                } else break;
+            } else {
+                Info ii = waitQ.poll();
+                finishTime += ii.executeTime;
+                answer[cnt++] = ii.idx;
             }
         }
 
-        //추가된 Node와 관련된 간선 지우기
-        for(int a: out.get(addedNode)) {
-            in.get(a).remove(addedNode);
-        }
-
-        for (int key = 1; key <= num; key++) {
-            if (visited[key]) continue;
-            HashSet<Integer> i = in.get(key);
-            HashSet<Integer> o = out.get(key);
-
-            // 2.막대 찾기
-            //1개짜리 막대 찾기
-            if ((i == null || i.isEmpty()) && (o == null || o.isEmpty())) {
-                stick++;
-                visited[key] = true;
-                continue;
-            }
-            //2개 이상 막대 찾기
-            if ((i == null || i.isEmpty()) && o.size() == 1) {
-                stick++;
-                int curr = key;
-                while (true) {
-                    visited[curr] = true;
-                    if (out.get(curr) == null) break;
-                    for (int a : out.get(curr)) {
-                        curr = a;
-                    }
-                }
-                continue;
-            }
-            //3. 8자 중심 찾기
-            if ((i != null && i.size() == 2) && (o != null && o.size() == 2)) {
-                eight++;
-                Queue<Integer> q = new LinkedList<>();
-                q.offer(key);
-                visited[key] = true;
-
-                while (!q.isEmpty()) {
-                    int curr = q.poll();
-                    HashSet<Integer> set = out.get(curr);
-                    for (int a : set) {
-                        if (!visited[a]) {
-                            visited[a] = true;
-                            q.offer(a);
-                        }
-                    }
-                }
-            }
-        }
-        //4. 도넛 찾기
-        for (int key = 1; key <= num; key++) {
-            if (visited[key]) continue;
-            visited[key] = true;
-            donut++;
-            Queue<Integer> q = new LinkedList<>();
-            q.offer(key);
-            while (!q.isEmpty()) {
-                int curr = q.poll();
-                HashSet<Integer> set = out.get(curr);
-                for (int a : set) {
-                    if(!visited[a]) {
-                        visited[a] = true;
-                        q.offer(a);
-                    }
-                }
-            }
-        }
-
-        return new int[]{addedNode, donut, stick, eight};
+        return answer;
     }
 }
 
 public class Main {
-    public static void main(String[] args) {
-        Solution sol = new Solution();
-        int[][] edges = {
-                {2, 3},
-                {4, 3},
-                {1, 1},
-                {2, 1}
-        };
-        //[[4, 11], [1, 12], [8, 3], [12, 7], [4, 2], [7, 11], [4, 8], [9, 6], [10, 11], [6, 10], [3, 5], [11, 1], [5, 3], [11, 9], [3, 8]]
-        int[][] edges2 = {
-                {4, 11},
-                {1, 12},
-                {8, 3},
-                {12, 7},
-                {4, 2},
-                {7, 11},
-                {4, 8},
-                {9, 6},
-                {10, 11},
-                {6, 10},
-                {3, 5},
-                {11, 1},
-                {5, 3},
-                {11, 9},
-                {3, 8}
-        };
+//    public static void main(String[] args) {
+//        Solution sol = new Solution();
+//        String[] input = new String[]{
+//                "3(a2(b))ef",
+//                "2(ab)k3(bc)",
+//                "2(ab3((cd)))",
+//                "2(2(ab)3(2(ac)))",
+//                "3(ab2(sg))",
+//        };
+//        String[] ans = new String[]{
+//                "abbabbabbef",
+//                "ababkbcbcbc",
+//                "abcdcdcdabcdcdcd",
+//                "ababacacacacacacababacacacacacac",
+//                "absgsgabsgsgabsgsg"
+//        };
+//        for(int i=0;i<input.length;i++){
+//            System.out.println(sol.solution(input[i]).equals(ans[i]));
+//        }
+//    }
 
-        int[][] edges3 = {
-                {1, 2},
-                {2, 3},
-                {3, 4},
-                {10, 1},
-                {10, 5}
-        };
-        System.out.println(Arrays.toString(sol.solution(edges3)));
+
+
+    public static void main(String[] args){
+        Solution T = new Solution();
+        System.out.println(Arrays.toString(T.solution(new int[][]{{2, 3}, {1, 2}, {8, 2}, {3, 1}, {10, 2}})));
+        System.out.println(Arrays.toString(T.solution(new int[][]{{5, 2}, {7, 3}, {1, 3}, {1, 5}, {2, 2}, {1, 1}})));
+        System.out.println(Arrays.toString(T.solution(new int[][]{{1, 2}, {2, 3}, {1, 3}, {3, 3}, {8, 2}, {1, 5}, {2, 2}, {1, 1}})));
+        System.out.println(Arrays.toString(T.solution(new int[][]{{999, 1000}, {996, 1000}, {998, 1000}, {999, 7}})));
+        System.out.println(Arrays.toString(T.solution(new int[][]{{12, 2}, {3, 2}, {12, 2}})));
+        System.out.println(Arrays.toString(T.solution(new int[][]{{10, 4}, {1, 6}, {10, 2}})));
+
     }
+
+//    public static void main(String[] args) {
+//        Solution sol = new Solution();
+//        String[] input = new String[]{
+//                "3(a2(b))ef",
+//                "2(ab)k3(bc)",
+//                "2(ab3((cd)))",
+//                "2(2(ab)3(2(ac)))",
+//                "3(ab2(sg))",
+//        };
+//        String[] ans = new String[]{
+//                "abbabbabbef",
+//                "ababkbcbcbc",
+//                "abcdcdcdabcdcdcd",
+//                "ababacacacacacacababacacacacacac",
+//                "absgsgabsgsgabsgsg"
+//        };
+//        for(int i=0;i<input.length;i++){
+//            System.out.println(sol.solution(input[i]).equals(ans[i]));
+//        }
+//    }
 }
