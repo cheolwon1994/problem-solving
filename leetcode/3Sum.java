@@ -10,7 +10,6 @@ class Solution {
         Arrays.sort(nums);
         int len = nums.length;
         List<List<Integer>> li = new ArrayList<>();
-
         for(int i=0;i<len-2;i++){
             if(i>0 && nums[i]==nums[i-1]) continue;     //같은 수 중복 제거
             if(nums[i] > 0 || nums[i]+nums[i+1]+nums[i+2] > 0) break;      //0보다 큰 수

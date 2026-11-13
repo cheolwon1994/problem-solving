@@ -2,136 +2,89 @@ import java.util.*;
 import java.io.*;
 import java.lang.*;
 
-class Info implements Comparable<Info> {
-    int idx, arrivalTime, executeTime;
-    Info(int idx, int arrivalTime, int executeTime) {
-        this.idx = idx;
-        this.arrivalTime = arrivalTime;
-        this.executeTime = executeTime;
+class ListNode {
+    int val;
+    ListNode next;
+
+    ListNode() {
     }
 
-    @Override
-    public int compareTo(Info i) {
-        if(i.executeTime == this.executeTime) {
-            return Integer.compare(this.idx, i.idx);
-        }
-        return Integer.compare(this.executeTime, i.executeTime);
-    }
-}
-
-class ArrivalInfo implements Comparable<ArrivalInfo> {
-    int idx, arrivalTime, executeTime;
-    ArrivalInfo(int idx, int arrivalTime, int executeTime) {
-        this.idx = idx;
-        this.arrivalTime = arrivalTime;
-        this.executeTime = executeTime;
+    ListNode(int val) {
+        this.val = val;
     }
 
-    @Override
-    public int compareTo(ArrivalInfo i) {
-        if(this.arrivalTime== i.arrivalTime) {
-            return Integer.compare(this.idx, i.idx);
-        }
-        return Integer.compare(this.arrivalTime, i.arrivalTime);
+    ListNode(int val, ListNode next) {
+        this.val = val;
+        this.next = next;
     }
 }
 
-//1. 고객 정보 대기열에 넣기
-//2. laser 끝난 고객의 시간-1까지 대기실에 있다고 가정
 class Solution {
-    public int[] solution(int[][] tasks){
-        //init
-        int[] answer = new int[tasks.length];
-        PriorityQueue<ArrivalInfo> pq = new PriorityQueue<>();
+    Stack<ListNode> stack;
 
-        //sort tasks -> 도착시간 오름차순으로 정렬
-        for(int i=0;i<tasks.length;i++) {
-            pq.offer(new ArrivalInfo(i, tasks[i][0], tasks[i][1]));
-        }
+    public void saveReverse(ListNode node) {
+        if (node == null) return;
+        stack.push(node);       //next는 사용하지 않는다. 추후에 사용
+        saveReverse(node.next);
+    }
 
-        //대기 큐
-        PriorityQueue<Info> waitQ = new PriorityQueue<>();
-        int cnt = 0;
-        int finishTime = 0;
 
-        while(!pq.isEmpty() || !waitQ.isEmpty()) {
-            //대기큐에 넣을 작업 넣는다
-            while(!pq.isEmpty()) {
-                if(pq.peek().arrivalTime <= finishTime) {
-                    ArrivalInfo ii = pq.poll();
-                    waitQ.offer(new Info(ii.idx, ii.arrivalTime, ii.executeTime));
-                } else break;
+    public void reorderList(ListNode head) {
+        if (head == null) return;
+        stack = new Stack<>();
+        saveReverse(head);
+        int len = stack.size();
+
+        ListNode root = head;
+        int cnt = 1;
+
+        // node가 홀수개 -> 끝 or reverse + head쪽
+        // node가 짝수개 -> reverse 더하고 끝
+        while(head!=null && cnt<len) {
+            //reverse 더하기
+            ListNode n = stack.pop();
+            n.next = head.next;
+            head.next = n;
+            head = head.next;
+            cnt++;
+            if(cnt==len) {
+                head.next = null;
+                break;
             }
 
-            //finishTime 갱신
-            if(waitQ.isEmpty()) {
-                if(!pq.isEmpty()) {
-                    finishTime = pq.peek().arrivalTime;
-                } else break;
-            } else {
-                Info ii = waitQ.poll();
-                finishTime += ii.executeTime;
-                answer[cnt++] = ii.idx;
+            //head쪽 더하기
+            head = head.next;
+            cnt++;
+            if(cnt==len) {
+                head.next = null;
+                break;
             }
         }
-
-        return answer;
+        head = root;
     }
 }
+
 
 public class Main {
-//    public static void main(String[] args) {
-//        Solution sol = new Solution();
-//        String[] input = new String[]{
-//                "3(a2(b))ef",
-//                "2(ab)k3(bc)",
-//                "2(ab3((cd)))",
-//                "2(2(ab)3(2(ac)))",
-//                "3(ab2(sg))",
-//        };
-//        String[] ans = new String[]{
-//                "abbabbabbef",
-//                "ababkbcbcbc",
-//                "abcdcdcdabcdcdcd",
-//                "ababacacacacacacababacacacacacac",
-//                "absgsgabsgsgabsgsg"
-//        };
-//        for(int i=0;i<input.length;i++){
-//            System.out.println(sol.solution(input[i]).equals(ans[i]));
-//        }
-//    }
-
-
-
-    public static void main(String[] args){
+    public static void main(String[] args) {
         Solution T = new Solution();
-        System.out.println(Arrays.toString(T.solution(new int[][]{{2, 3}, {1, 2}, {8, 2}, {3, 1}, {10, 2}})));
-        System.out.println(Arrays.toString(T.solution(new int[][]{{5, 2}, {7, 3}, {1, 3}, {1, 5}, {2, 2}, {1, 1}})));
-        System.out.println(Arrays.toString(T.solution(new int[][]{{1, 2}, {2, 3}, {1, 3}, {3, 3}, {8, 2}, {1, 5}, {2, 2}, {1, 1}})));
-        System.out.println(Arrays.toString(T.solution(new int[][]{{999, 1000}, {996, 1000}, {998, 1000}, {999, 7}})));
-        System.out.println(Arrays.toString(T.solution(new int[][]{{12, 2}, {3, 2}, {12, 2}})));
-        System.out.println(Arrays.toString(T.solution(new int[][]{{10, 4}, {1, 6}, {10, 2}})));
+        ListNode n = new ListNode(1);
+        ListNode head = n;
+        n.next = new ListNode(2);
+        n = n.next;
+        n.next = new ListNode(3);
+        n = n.next;
+        n.next = new ListNode(4);
+        n = n.next;
+        n.next = new ListNode(5);
+
+
+        T.reorderList(head);
+        for (ListNode current = head; current != null; current = current.next) {
+            System.out.print(current.val);
+            if (current.next != null) System.out.print(" ");
+        }
+        System.out.println();
 
     }
-
-//    public static void main(String[] args) {
-//        Solution sol = new Solution();
-//        String[] input = new String[]{
-//                "3(a2(b))ef",
-//                "2(ab)k3(bc)",
-//                "2(ab3((cd)))",
-//                "2(2(ab)3(2(ac)))",
-//                "3(ab2(sg))",
-//        };
-//        String[] ans = new String[]{
-//                "abbabbabbef",
-//                "ababkbcbcbc",
-//                "abcdcdcdabcdcdcd",
-//                "ababacacacacacacababacacacacacac",
-//                "absgsgabsgsgabsgsg"
-//        };
-//        for(int i=0;i<input.length;i++){
-//            System.out.println(sol.solution(input[i]).equals(ans[i]));
-//        }
-//    }
 }
